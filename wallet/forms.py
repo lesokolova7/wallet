@@ -15,13 +15,3 @@ class TransactionForm(forms.Form):
     def __init__(self, sender_currency, sender_id, *args, **kwargs):
         super(TransactionForm, self).__init__(*args, **kwargs)
         self.fields['receiver'].queryset = Wallet.objects.filter(currency=sender_currency).exclude(pk=sender_id)
-
-
-
-
-
-
-
-
-
-
