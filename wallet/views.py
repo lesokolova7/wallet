@@ -1,20 +1,18 @@
-import string
-import random
 from decimal import Decimal
 
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.shortcuts import render
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+
+from wallet_proj.settings import MAX_USER_WALLETS_COUNT, INIT_WALLET_CURRENCY_RUB, INIT_WALLET_CURRENCY_FOREIGN, \
+    COMMISSION_FREE, COMMISSION, STATUS_SUCCESS, STATUS_FAILURE
 from .forms import CreateWallet, TransactionForm
-from .models import Transaction, WalletUser, Wallet, WalletCurrency
+from .helpers import get_wallet_name
+from .models import Transaction, Wallet, WalletCurrency
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import redirect, get_object_or_404
-
-
-MAX_USER_WALLETS_COUNT = 5
-INIT_WALLET_CURRENCY_RUB = 100.00
-INIT_WALLET_CURRENCY_FOREIGN = 3.00
 
 
 @login_required(login_url="/login")
@@ -40,38 +38,18 @@ def delete_wallet(request, wallet_id: int):
 
 def sign_up(request):
     """
-    When creating a new user, we also write data to WalletUser
+    Creating a new user
     """
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            wallet_user = WalletUser()
-            wallet_user.id = user
-            wallet_user.name = user.username
-            wallet_user.save()
             login(request, user)
             return redirect("/home")
     else:
         form = UserCreationForm()
 
     return render(request, 'registration/signup.html', {"form": form})
-
-
-def get_wallet_name(length: int = 8):
-    """
-    A unique wallet name generator
-
-    Args:
-            length: int = 8
-    Returns:
-            unique_name: str
-    """
-    characters = string.ascii_uppercase + string.digits
-    while True:
-        wallet_name = ''.join(random.choice(characters) for _ in range(length))
-        if not Wallet.objects.filter(name=wallet_name).exists():
-            return wallet_name
 
 
 @login_required(login_url="/login")
@@ -88,12 +66,12 @@ def create_wallet(request):
         form = CreateWallet(request.POST)
         if form.is_valid():
             wallet = form.save(commit=False)
-            user = WalletUser.objects.get(pk=request.user.id)
-            wallet.user_id = user
+            user = User.objects.get(pk=request.user.id)
+            wallet.user_id = user.id
             wallet.name = get_wallet_name()
 
             # deposit accrual depending on the selected currency
-            if wallet.currency == WalletCurrency.ruble:
+            if wallet.currency == WalletCurrency.ruble.value:
                 wallet.balance = INIT_WALLET_CURRENCY_RUB
             else:
                 wallet.balance = INIT_WALLET_CURRENCY_FOREIGN
@@ -104,24 +82,25 @@ def create_wallet(request):
     return render(request, "main/create_wallet.html", {"form": form})
 
 
+@login_required(login_url="/login")
 def make_transaction(request, sender_wallet_name: str):
-    sender_wallet_user = WalletUser.objects.get(pk=request.user.id)
+    sender_wallet_user = User.objects.get(pk=request.user.id)
     sender_wallet = Wallet.objects.get(name=sender_wallet_name)
     sender_id = sender_wallet.id
     sender_currency = sender_wallet.currency
-    form = TransactionForm(sender_currency, sender_id)
+    form = TransactionForm(sender_currency, sender_id, request.POST)
 
     if request.method == 'POST':
-        form = TransactionForm(sender_currency, request.POST)
+        form = TransactionForm(sender_currency, sender_id, request.POST)
         if form.is_valid():
             receiver = form.cleaned_data['receiver']
             amount = form.cleaned_data['amount']
 
             # calculation of the commission
-            if sender_wallet_user == receiver.user_id:
-                commission = Decimal('0')
+            if sender_wallet_user == receiver.user:
+                commission = Decimal(COMMISSION_FREE)
             else:
-                commission = amount * Decimal('0.1')
+                commission = amount * Decimal(COMMISSION)
 
             # checking balance
             if sender_wallet.balance >= amount + commission:
@@ -131,12 +110,12 @@ def make_transaction(request, sender_wallet_name: str):
                 receiver.balance += amount
                 receiver.save()
 
-                status = "PAID"
+                status = STATUS_SUCCESS
                 redirect_link = "transaction_success"
 
                 messages.success(request, "Transaction successful")
             else:
-                status = "FAILED"
+                status = STATUS_FAILURE
                 redirect_link = "transaction_failed"
 
                 messages.error(request, "Insufficient funds for this transaction.")

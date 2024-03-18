@@ -1,49 +1,53 @@
 from django.contrib.auth.models import User
 from django.db import models
-from dataclasses import dataclass
+from enum import Enum
 
 
-@dataclass
-class WalletCurrency:
+class WalletCurrency(Enum):
     ruble = "RUB"
     dollar = "USD"
     euro = "EUR"
 
+    @classmethod
+    def choices(cls):
+        return tuple((c.value, c.value) for c in cls)
 
-class WalletUser(models.Model):
-    id = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, unique=True)
-    name = models.TextField()
+    def __str__(self):
+        return self.value
+
+
+class WalletType(Enum):
+    visa = "Visa"
+    mastercard = "Mastercard"
+
+    @classmethod
+    def choices(cls):
+        return tuple((t.value, t.value) for t in cls)
+
+
+class TransactionStatus(Enum):
+    paid = "PAID"
+    failed = "FAILED"
 
 
 class Wallet(models.Model):
-    WALLET_TYPE_CHOICES = [
-        ("Visa", "Visa"),
-        ("Mastercard", "Mastercard")
-    ]
-
-    WALLET_CURRENCY_CHOICES = [
-        (WalletCurrency.ruble, WalletCurrency.ruble),
-        (WalletCurrency.dollar, WalletCurrency.dollar),
-        (WalletCurrency.euro, WalletCurrency.euro)
-    ]
-
+    DoesNotExist = None
     name = models.CharField(max_length=8, unique=True)
-    type = models.TextField(choices=WALLET_TYPE_CHOICES)
-    currency = models.TextField(choices=WALLET_CURRENCY_CHOICES)
+    type = models.CharField(choices=WalletType.choices())
+    currency = models.CharField(choices=WalletCurrency.choices())
     balance = models.DecimalField(max_digits=20, decimal_places=2)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
-    user_id = models.ForeignKey(WalletUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user")
 
     def __str__(self):
         return self.name
 
 
 class Transaction(models.Model):
-    sender = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="wallet_of_sender")
-    receiver = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="wallet_of_receiver")
+    sender = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
+    receiver = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     commission = models.DecimalField(max_digits=20, decimal_places=2)
-    status = models.TextField()
+    status = models.CharField(TransactionStatus)
     timestamp = models.DateTimeField(auto_now_add=True)
-
