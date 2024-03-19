@@ -4,11 +4,13 @@ Helpers module
 import string
 import random
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from wallet.models import Wallet
-from wallet_proj.settings import LENGTH_WALLET_NAME
+from django.conf import settings
 
 
-def get_wallet_name(length=LENGTH_WALLET_NAME):
+def get_wallet_name(length=settings.LENGTH_WALLET_NAME):
     """
     A unique wallet name generator
 
@@ -21,5 +23,5 @@ def get_wallet_name(length=LENGTH_WALLET_NAME):
     wallet_name = ''.join(random.choice(characters) for _ in range(length))
     try:
         Wallet.objects.get(name=wallet_name)
-    except Wallet.DoesNotExist:
+    except ObjectDoesNotExist:
         return wallet_name

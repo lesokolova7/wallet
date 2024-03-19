@@ -4,21 +4,18 @@ from enum import Enum
 
 
 class WalletCurrency(Enum):
-    ruble = "RUB"
-    dollar = "USD"
-    euro = "EUR"
+    RUBLE = "RUB"
+    DOLLAR = "USD"
+    EURO = "EUR"
 
     @classmethod
     def choices(cls):
         return tuple((c.value, c.value) for c in cls)
 
-    def __str__(self):
-        return self.value
-
 
 class WalletType(Enum):
-    visa = "Visa"
-    mastercard = "Mastercard"
+    VISA = "Visa"
+    MASTERCARD = "Mastercard"
 
     @classmethod
     def choices(cls):
@@ -26,15 +23,18 @@ class WalletType(Enum):
 
 
 class TransactionStatus(Enum):
-    paid = "PAID"
-    failed = "FAILED"
+    PAID = "PAID"
+    FAILED = "FAILED"
+
+    @classmethod
+    def choices(cls):
+        return tuple((s.value, s.value) for s in cls)
 
 
 class Wallet(models.Model):
-    DoesNotExist = None
     name = models.CharField(max_length=8, unique=True)
-    type = models.CharField(choices=WalletType.choices())
-    currency = models.CharField(choices=WalletCurrency.choices())
+    type = models.CharField(choices=WalletType.choices(), max_length=15)
+    currency = models.CharField(choices=WalletCurrency.choices(), max_length=5)
     balance = models.DecimalField(max_digits=20, decimal_places=2)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
@@ -45,9 +45,9 @@ class Wallet(models.Model):
 
 
 class Transaction(models.Model):
-    sender = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
-    receiver = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
+    sender = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions_sender")
+    receiver = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions_receiver")
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     commission = models.DecimalField(max_digits=20, decimal_places=2)
-    status = models.CharField(TransactionStatus)
+    status = models.CharField(choices=TransactionStatus.choices(), max_length=15)
     timestamp = models.DateTimeField(auto_now_add=True)

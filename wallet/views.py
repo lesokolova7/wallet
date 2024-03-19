@@ -6,8 +6,7 @@ from django.shortcuts import render
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 
-from wallet_proj.settings import MAX_USER_WALLETS_COUNT, INIT_WALLET_CURRENCY_RUB, INIT_WALLET_CURRENCY_FOREIGN, \
-    COMMISSION_FREE, COMMISSION, STATUS_SUCCESS, STATUS_FAILURE
+from django.conf import settings
 from .forms import CreateWallet, TransactionForm
 from .helpers import get_wallet_name
 from .models import Transaction, Wallet, WalletCurrency
@@ -58,7 +57,7 @@ def create_wallet(request):
     # limit on the number of user wallets
     user_wallets_count = Wallet.objects.filter(user_id=request.user.id).count()
 
-    if user_wallets_count >= MAX_USER_WALLETS_COUNT:
+    if user_wallets_count >= settings.MAX_USER_WALLETS_COUNT:
         messages.error(request, "You can't create more than 5 wallets.")
         return redirect("/home")
 
@@ -71,10 +70,10 @@ def create_wallet(request):
             wallet.name = get_wallet_name()
 
             # deposit accrual depending on the selected currency
-            if wallet.currency == WalletCurrency.ruble.value:
-                wallet.balance = INIT_WALLET_CURRENCY_RUB
+            if wallet.currency == WalletCurrency.RUBLE.value:
+                wallet.balance = settings.INIT_WALLET_CURRENCY_RUB
             else:
-                wallet.balance = INIT_WALLET_CURRENCY_FOREIGN
+                wallet.balance = settings.INIT_WALLET_CURRENCY_FOREIGN
             wallet.save()
             return redirect("/home")
     else:
@@ -98,9 +97,9 @@ def make_transaction(request, sender_wallet_name: str):
 
             # calculation of the commission
             if sender_wallet_user == receiver.user:
-                commission = Decimal(COMMISSION_FREE)
+                commission = Decimal(settings.COMMISSION_FREE)
             else:
-                commission = amount * Decimal(COMMISSION)
+                commission = amount * Decimal(settings.COMMISSION)
 
             # checking balance
             if sender_wallet.balance >= amount + commission:
@@ -110,12 +109,12 @@ def make_transaction(request, sender_wallet_name: str):
                 receiver.balance += amount
                 receiver.save()
 
-                status = STATUS_SUCCESS
+                status = settings.STATUS_SUCCESS
                 redirect_link = "transaction_success"
 
                 messages.success(request, "Transaction successful")
             else:
-                status = STATUS_FAILURE
+                status = settings.STATUS_FAILURE
                 redirect_link = "transaction_failed"
 
                 messages.error(request, "Insufficient funds for this transaction.")
