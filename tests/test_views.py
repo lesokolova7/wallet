@@ -17,6 +17,9 @@ class HomeViewTestCase(TestCase):
         self.user = User.objects.create_user(username="tuser", password="testpass")
         self.client.login(username="tuser", password="testpass")
 
+    def tearDown(self):
+        User.objects.all().delete()
+
     def test_home_view_authenticated_user(self):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
@@ -32,6 +35,9 @@ class CreateWalletViewTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="tuser", password="testpass")
         self.client.login(username="tuser", password="testpass")
+
+    def tearDown(self):
+        User.objects.all().delete()
 
     def test_create_wallet_view_get(self):
         response = self.client.get(reverse("create_wallet"))
@@ -54,6 +60,10 @@ class DeleteWalletViewTestCase(TestCase):
         self.wallet = Wallet.objects.create(
             name="TEST0001", type="Visa", currency="RUB", balance=100.00, user=self.user
         )
+
+    def tearDown(self):
+        User.objects.all().delete()
+        Wallet.objects.all().delete()
 
     def test_delete_wallet_view_post(self):
         initial_wallet_count = Wallet.objects.count()
@@ -85,6 +95,10 @@ class MakeTransactionViewTestCase(TestCase):
             balance=3.00,
             user=self.receiver_user,
         )
+
+    def tearDown(self):
+        User.objects.all().delete()
+        Wallet.objects.all().delete()
 
     def test_make_transaction_view_get(self):
         response = self.client.get(

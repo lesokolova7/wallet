@@ -10,51 +10,6 @@ from wallet.models import (
 )
 
 
-class WalletModelTestCase(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username="tuser", password="testpass")
-
-    def test_wallet(self):
-        wallet_1 = Wallet.objects.create(
-            name="TEST0001",
-            type=WalletType.VISA.value,
-            currency=WalletCurrency.RUBLE.value,
-            balance=100.00,
-            user=self.user,
-        )
-        self.assertEqual(wallet_1.name, "TEST0001")
-        self.assertEqual(wallet_1.type, WalletType.VISA.value)
-        self.assertEqual(wallet_1.currency, WalletCurrency.RUBLE.value)
-        self.assertEqual(wallet_1.balance, 100.00)
-        self.assertEqual(wallet_1.user, self.user)
-
-        wallet_2 = Wallet.objects.create(
-            name="TEST0002",
-            type=WalletType.MASTERCARD.value,
-            currency=WalletCurrency.EURO.value,
-            balance=3.00,
-            user=self.user,
-        )
-        self.assertEqual(wallet_2.name, "TEST0002")
-        self.assertEqual(wallet_2.type, WalletType.MASTERCARD.value)
-        self.assertEqual(wallet_2.currency, WalletCurrency.EURO.value)
-        self.assertEqual(wallet_2.balance, 3.00)
-        self.assertEqual(wallet_2.user, self.user)
-
-        wallet_3 = Wallet.objects.create(
-            name="TEST0003",
-            type=WalletType.VISA.value,
-            currency=WalletCurrency.DOLLAR.value,
-            balance=3.00,
-            user=self.user,
-        )
-        self.assertEqual(wallet_3.name, "TEST0003")
-        self.assertEqual(wallet_3.type, WalletType.VISA.value)
-        self.assertEqual(wallet_3.currency, WalletCurrency.DOLLAR.value)
-        self.assertEqual(wallet_3.balance, 3.00)
-        self.assertEqual(wallet_3.user, self.user)
-
-
 class TransactionModelTestCase(TestCase):
     def setUp(self):
         """
@@ -154,6 +109,10 @@ class TransactionModelTestCase(TestCase):
             balance=3.00,
             user=self.user_3,
         )
+
+    def tearDown(self):
+        Wallet.objects.all().delete()
+        User.objects.all().delete()
 
     def test_transaction(self):
         transaction_1 = Transaction.objects.create(

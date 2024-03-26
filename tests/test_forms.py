@@ -6,16 +6,22 @@ from wallet.models import WalletCurrency, Wallet
 
 
 class CreateWalletFormTestCase(TestCase):
-    def test_create_wallet_form_valid_data(self):
-        form = CreateWallet(
+
+    def setUp(self):
+        self.form_completed = CreateWallet(
             data={"type": "Visa", "currency": WalletCurrency.RUBLE.value}
         )
-        self.assertTrue(form.is_valid())
+        self.form_empty = CreateWallet(data={})
+
+    def tearDown(self):
+        Wallet.objects.all().delete()
+
+    def test_create_wallet_form_valid_data(self):
+        self.assertTrue(self.form_completed.is_valid())
 
     def test_create_wallet_form_invalid_data(self):
-        form = CreateWallet(data={})
-        self.assertFalse(form.is_valid())
-        self.assertEquals(len(form.errors), 2)
+        self.assertFalse(self.form_empty.is_valid())
+        self.assertEquals(len(self.form_empty.errors), 2)
 
 
 class TransactionFormTestCase(TestCase):
@@ -40,20 +46,24 @@ class TransactionFormTestCase(TestCase):
             balance=100.00,
             user=self.receiver,
         )
-
-    def test_transaction_form_valid_data(self):
-        form = TransactionForm(
+        self.form_valid = TransactionForm(
             sender_currency=WalletCurrency.RUBLE.value,
             sender_id=self.sender_wallet.id,
-            data={"receiver": self.receiver_wallet.id, "amount": 25.00},
+            data={"receiver": self.receiver_wallet.id, "amount": 50.00},
         )
-        self.assertTrue(form.is_valid())
-
-    def test_transaction_form_invalid_data(self):
-        form = TransactionForm(
+        self.form_invalid = TransactionForm(
             sender_currency=WalletCurrency.RUBLE.value,
             sender_id=self.sender_wallet.id,
             data={},
         )
-        self.assertFalse(form.is_valid())
-        self.assertEquals(len(form.errors), 2)
+
+    def tearDown(self):
+        Wallet.objects.all().delete()
+        User.objects.all().delete()
+
+    def test_transaction_form_valid_data(self):
+        self.assertTrue(self.form_valid.is_valid())
+
+    def test_transaction_form_invalid_data(self):
+        self.assertFalse(self.form_invalid.is_valid())
+        self.assertEquals(len(self.form_invalid.errors), 2)
